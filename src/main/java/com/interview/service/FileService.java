@@ -25,21 +25,16 @@ import java.util.UUID;
 public class FileService {
 
     /**
-     * 默认允许的图片类型
+     * 允许的图片类型（头像上传）
      */
     private static final List<String> IMAGE_TYPES = Arrays.asList(
             "image/jpeg", "image/png", "image/gif", "image/webp"
     );
 
     /**
-     * 默认允许的所有文件类型
+     * PDF 文件类型（简历上传）
      */
-    private static final List<String> ALL_TYPES = Arrays.asList(
-            "image/jpeg", "image/png", "image/gif", "image/webp",
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    );
+    private static final String PDF_TYPE = "application/pdf";
 
     /**
      * 默认文件大小限制：10MB
@@ -53,10 +48,10 @@ public class FileService {
     private OssConfig ossConfig;
 
     /**
-     * 上传图片文件
+     * 上传图片文件（头像等）
      *
-     * @param file    上传文件
-     * @param folder  OSS 存储目录（如 avatar、resume）
+     * @param file   上传文件
+     * @param folder OSS 存储目录（如 avatar）
      * @return 文件访问 URL
      */
     public String uploadImage(MultipartFile file, String folder) {
@@ -65,27 +60,23 @@ public class FileService {
     }
 
     /**
-     * 上传通用文件
+     * 上传 PDF 文件（简历等）
      *
-     * @param file    上传文件
-     * @param folder  OSS 存储目录
+     * @param file   上传文件
+     * @param folder OSS 存储目录（如 resume）
      * @return 文件访问 URL
      */
-    public String uploadFile(MultipartFile file, String folder) {
-        validateFile(file, ALL_TYPES, DEFAULT_MAX_SIZE);
-        return doUpload(file, folder);
-    }
-
-    /**
-     * 上传通用文件（自定义大小限制）
-     *
-     * @param file    上传文件
-     * @param folder  OSS 存储目录
-     * @param maxSize 最大文件大小（字节）
-     * @return 文件访问 URL
-     */
-    public String uploadFile(MultipartFile file, String folder, long maxSize) {
-        validateFile(file, ALL_TYPES, maxSize);
+    public String uploadPdf(MultipartFile file, String folder) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("文件不能为空");
+        }
+        String contentType = file.getContentType();
+        if (!PDF_TYPE.equals(contentType)) {
+            throw new BusinessException("仅支持 PDF 格式文件");
+        }
+        if (file.getSize() > DEFAULT_MAX_SIZE) {
+            throw new BusinessException("文件大小超出限制");
+        }
         return doUpload(file, folder);
     }
 
