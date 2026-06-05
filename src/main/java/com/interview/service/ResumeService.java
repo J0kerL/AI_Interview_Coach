@@ -20,4 +20,10 @@ public interface ResumeService {
      * 获取简历列表
      */
     List<ResumeVO> getResumeList();
+
+    /**
+     * 根据id删除简历
+     */
+    void deleteById(Long id);
+
 }

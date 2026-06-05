@@ -23,4 +23,7 @@ public interface ResumeMapper {
 
     @Select("SELECT * FROM resumes WHERE user_id = #{userId} AND deleted_at IS NULL ORDER BY created_at DESC")
     List<Resumes> selectListByUserId(long userId);
+
+    @Update("UPDATE resumes SET deleted_at = NOW() WHERE id = #{id}")
+    void deleteById(Long id);
 }

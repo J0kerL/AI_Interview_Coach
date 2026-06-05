@@ -37,4 +37,14 @@ public class ResumeController {
         List<ResumeVO> list = resumeService.getResumeList();
         return Result.success(list);
     }
+
+    /**
+     * 根据id删除简历
+     */
+    @DeleteMapping("delete/{id}")
+    public Result<Void> deleteById(@PathVariable Long id) {
+        resumeService.deleteById(id);
+        return Result.success();
+    }
+
 }

@@ -94,4 +94,34 @@ public class ResumeServiceImpl implements ResumeService {
         }).toList();
     }
 
+    /**
+     * 根据id删除简历
+     */
+    @Override
+    public void deleteById(Long id) {
+
+        Resumes resume = resumeMapper.selectById(id);
+        // 1. 判断简历是否存在
+        if (resume == null) {
+            throw new BusinessException("简历不存在");
+        }
+
+        // 2. 判断简历是否属于当前用户
+        if (!resume.getUserId().equals(StpUtil.getLoginIdAsLong())) {
+            throw new BusinessException("无权限删除");
+        }
+
+        // 3. 逻辑删除
+        resumeMapper.deleteById(id);
+
+        // 4. 清理 OSS 文件
+        if (resume.getFileUrl() != null) {
+            try {
+                fileService.deleteFile(resume.getFileUrl());
+            } catch (Exception e) {
+                log.warn("OSS 文件删除失败: {}", resume.getFileUrl(), e);
+            }
+        }
+    }
+
 }
