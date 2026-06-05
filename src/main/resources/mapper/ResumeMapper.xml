@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.ResumeMapper">
+
+    <!-- 根据ids批量查询简历 -->
+    <select id="selectByIds" resultType="com.interview.entity.Resumes">
+        SELECT * FROM resumes
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND deleted_at IS NULL
+    </select>
+
+    <!-- 根据ids批量逻辑删除 -->
+    <update id="deleteByIds">
+        UPDATE resumes SET deleted_at = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND deleted_at IS NULL
+    </update>
+
+</mapper>

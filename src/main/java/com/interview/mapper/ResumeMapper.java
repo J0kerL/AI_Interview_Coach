@@ -26,4 +26,8 @@ public interface ResumeMapper {
 
     @Update("UPDATE resumes SET deleted_at = NOW() WHERE id = #{id}")
     void deleteById(Long id);
+
+    List<Resumes> selectByIds(@Param("ids") List<Long> ids);
+
+    void deleteByIds(@Param("ids") List<Long> ids);
 }

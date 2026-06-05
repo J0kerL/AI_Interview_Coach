@@ -26,4 +26,8 @@ public interface ResumeService {
      */
     void deleteById(Long id);
 
+    /**
+     * 根据ids批量删除简历
+     */
+    void deleteByIds(List<Long> ids);
 }

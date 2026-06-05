@@ -47,4 +47,13 @@ public class ResumeController {
         return Result.success();
     }
 
+    /**
+     * 根据ids批量删除简历
+     */
+    @DeleteMapping("/delete/batch")
+    public Result<Void> deleteByIds(@RequestBody List<Long> ids) {
+        resumeService.deleteByIds(ids);
+        return Result.success();
+    }
+
 }
