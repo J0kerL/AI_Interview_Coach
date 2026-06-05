@@ -3,6 +3,8 @@ package com.interview.mapper;
 import com.interview.entity.Resumes;
 import org.apache.ibatis.annotations.*;
 
+import java.util.List;
+
 /**
  * @Author Diamond
  * @Create 2026/6/4
@@ -18,4 +20,7 @@ public interface ResumeMapper {
 
     @Select("SELECT COUNT(*) FROM resumes WHERE user_id = #{userId} AND deleted_at IS NULL")
     int countByUserId(@Param("userId") long userId);
+
+    @Select("SELECT * FROM resumes WHERE user_id = #{userId} AND deleted_at IS NULL ORDER BY created_at DESC")
+    List<Resumes> selectListByUserId(long userId);
 }

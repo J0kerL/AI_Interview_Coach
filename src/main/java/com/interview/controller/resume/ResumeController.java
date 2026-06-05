@@ -4,11 +4,10 @@ import com.interview.common.Result;
 import com.interview.service.ResumeService;
 import com.interview.vo.ResumeVO;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * @Author Diamond
@@ -30,4 +29,12 @@ public class ResumeController {
         return Result.success(resumeVO);
     }
 
+    /**
+     * 获取简历列表
+     */
+    @GetMapping("/list")
+    public Result<List<ResumeVO>> getResumeList() {
+        List<ResumeVO> list = resumeService.getResumeList();
+        return Result.success(list);
+    }
 }

@@ -3,6 +3,8 @@ package com.interview.service;
 import com.interview.vo.ResumeVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * @Author Diamond
  * @Create 2026/6/4
@@ -14,4 +16,8 @@ public interface ResumeService {
      */
     ResumeVO uploadResume(MultipartFile file);
 
+    /**
+     * 获取简历列表
+     */
+    List<ResumeVO> getResumeList();
 }

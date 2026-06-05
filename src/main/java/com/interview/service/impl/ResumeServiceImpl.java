@@ -13,6 +13,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * @Author Diamond
  * @Create 2026/6/4
@@ -70,6 +72,26 @@ public class ResumeServiceImpl implements ResumeService {
         ResumeVO resumeVO = new ResumeVO();
         BeanUtils.copyProperties(savedResume, resumeVO);
         return resumeVO;
+    }
+
+    /**
+     * 获取简历列表
+     */
+    @Override
+    public List<ResumeVO> getResumeList() {
+
+        // 1. 获取当前用户ID
+        long userId = StpUtil.getLoginIdAsLong();
+
+        // 2. 查询简历列表
+        List<Resumes> list = resumeMapper.selectListByUserId(userId);
+
+        // 3. 循环转为VO列表
+        return list.stream().map(resume -> {
+            ResumeVO resumeVO = new ResumeVO();
+            BeanUtils.copyProperties(resume, resumeVO);
+            return resumeVO;
+        }).toList();
     }
 
 }
