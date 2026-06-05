@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.interview</groupId>
-    <artifactId>AI_Interview_Coach</artifactId>
+    <artifactId>AI_Interview_Coach_backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>AI_Interview_Coach_backend</name>
     <description>AI_Interview_Coach_backend</description>
