@@ -30,6 +30,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                             "/auth/register",
                             "/auth/captcha",
                             "/user/forgot-password",
+                            "/ai/test",
                             "/error"
                     )
                     .check(r -> StpUtil.checkLogin());
