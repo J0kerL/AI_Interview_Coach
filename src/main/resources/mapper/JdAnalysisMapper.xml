@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.JdAnalysisMapper">
+
+    <!-- 插入JD分析结果 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="a.id">
+        INSERT INTO jd_analysis (jd_id, required_skills, preferred_skills, responsibilities, keywords)
+        VALUES (#{a.jdId}, #{a.requiredSkills}, #{a.preferredSkills}, #{a.responsibilities}, #{a.keywords})
+    </insert>
+
+</mapper>

@@ -1,23 +1,34 @@
 package com.interview.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interview.common.exception.BusinessException;
 import com.interview.dto.CreateJdDTO;
+import com.interview.entity.JdAnalysis;
 import com.interview.entity.JobDescriptions;
+import com.interview.mapper.JdAnalysisMapper;
 import com.interview.mapper.JdMapper;
+import com.interview.model.response.JdParseResult;
 import com.interview.service.JdService;
+import com.interview.service.llm.LlmGatewayService;
+import com.interview.service.llm.PromptTemplateManager;
+import com.interview.vo.JdAnalysisVO;
 import com.interview.vo.JdVO;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Author Diamond
  * @Create 2026/6/5
  */
+@Slf4j
 @Service
 public class JdServiceImpl implements JdService {
 
@@ -28,6 +39,18 @@ public class JdServiceImpl implements JdService {
 
     @Resource
     private JdMapper jdMapper;
+
+    @Resource
+    private JdAnalysisMapper jdAnalysisMapper;
+
+    @Resource
+    private LlmGatewayService llmGatewayService;
+
+    @Resource
+    private PromptTemplateManager promptTemplateManager;
+
+    @Resource
+    private ObjectMapper objectMapper;
 
     /**
      * 创建 JD
@@ -129,6 +152,104 @@ public class JdServiceImpl implements JdService {
         int rows = jdMapper.deleteByIdsAndUserId(ids, userId);
         if (rows == 0) {
             throw new BusinessException("未找到可删除的 JD");
+        }
+    }
+
+    /**
+     * AI 解析 JD
+     */
+    @Override
+    public void parseJd(Long jdId) {
+
+        long userId = StpUtil.getLoginIdAsLong();
+
+        // 1. 查询 JD + 校验归属权
+        JobDescriptions jd = jdMapper.selectById(jdId);
+        if (jd == null) {
+            throw new BusinessException("JD 不存在");
+        }
+        if (!jd.getUserId().equals(userId)) {
+            throw new BusinessException("无权限操作");
+        }
+
+        // 2. 校验 JD 有文本内容可解析
+        if (!StringUtils.hasText(jd.getContent())) {
+            throw new BusinessException("该 JD 没有文本内容，无法解析");
+        }
+
+        // 3. 检查是否已有解析结果（避免重复解析）
+        JdAnalysis existing = jdAnalysisMapper.selectByJdId(jdId);
+        if (existing != null) {
+            throw new BusinessException("该 JD 已解析，请勿重复操作");
+        }
+
+        try {
+            // 4. 构建 Prompt 并调用 LLM
+            String prompt = promptTemplateManager.buildPrompt("jd-parse",
+                    Map.of("jdText", jd.getContent()));
+            JdParseResult result = llmGatewayService.call(prompt, JdParseResult.class);
+
+            // 5. 将结果写入 jd_analysis 表
+            JdAnalysis analysis = JdAnalysis.builder()
+                    .jdId(jdId)
+                    .requiredSkills(toJson(result.getRequiredSkills()))
+                    .preferredSkills(toJson(result.getPreferredSkills()))
+                    .responsibilities(toJson(result.getResponsibilities()))
+                    .keywords(toJson(result.getKeywords()))
+                    .build();
+            jdAnalysisMapper.insert(analysis);
+
+            log.info("JD 解析成功: id={}", jdId);
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("JD 解析失败: id={}", jdId, e);
+            throw new BusinessException("JD 解析失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取 JD 解析结果
+     */
+    @Override
+    public JdAnalysisVO getJdAnalysis(Long jdId) {
+
+        long userId = StpUtil.getLoginIdAsLong();
+
+        // 1. 校验 JD 归属
+        JobDescriptions jd = jdMapper.selectById(jdId);
+        if (jd == null) {
+            throw new BusinessException("JD 不存在");
+        }
+        if (!jd.getUserId().equals(userId)) {
+            throw new BusinessException("无权限查看");
+        }
+
+        // 2. 查询解析结果
+        JdAnalysis analysis = jdAnalysisMapper.selectByJdId(jdId);
+        if (analysis == null) {
+            throw new BusinessException("该 JD 尚未解析");
+        }
+
+        // 3. 转为 VO
+        JdAnalysisVO vo = new JdAnalysisVO();
+        BeanUtils.copyProperties(analysis, vo);
+        return vo;
+    }
+
+    /**
+     * 对象转 JSON 字符串
+     */
+    private String toJson(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            log.warn("JSON 序列化失败", e);
+            return null;
         }
     }
 

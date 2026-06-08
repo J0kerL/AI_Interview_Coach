@@ -3,6 +3,7 @@ package com.interview.controller.jd;
 import com.interview.common.Result;
 import com.interview.dto.CreateJdDTO;
 import com.interview.service.JdService;
+import com.interview.vo.JdAnalysisVO;
 import com.interview.vo.JdVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -66,6 +67,24 @@ public class JdController {
     public Result<Void> deleteJdByIds(@RequestBody List<Long> ids) {
         jdService.deleteJdByIds(ids);
         return Result.success();
+    }
+
+    /**
+     * AI 解析 JD
+     */
+    @PostMapping("/{id}/parse")
+    public Result<Void> parseJd(@PathVariable Long id) {
+        jdService.parseJd(id);
+        return Result.success();
+    }
+
+    /**
+     * 获取 JD 解析结果
+     */
+    @GetMapping("/{id}/analysis")
+    public Result<JdAnalysisVO> getJdAnalysis(@PathVariable Long id) {
+        JdAnalysisVO analysisVO = jdService.getJdAnalysis(id);
+        return Result.success(analysisVO);
     }
 
 }

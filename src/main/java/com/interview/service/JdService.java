@@ -1,6 +1,7 @@
 package com.interview.service;
 
 import com.interview.dto.CreateJdDTO;
+import com.interview.vo.JdAnalysisVO;
 import com.interview.vo.JdVO;
 
 import java.util.List;
@@ -35,5 +36,15 @@ public interface JdService {
      * 批量删除 JD
      */
     void deleteJdByIds(List<Long> ids);
+
+    /**
+     * AI 解析 JD
+     */
+    void parseJd(Long jdId);
+
+    /**
+     * 获取 JD 解析结果
+     */
+    JdAnalysisVO getJdAnalysis(Long jdId);
 
 }
