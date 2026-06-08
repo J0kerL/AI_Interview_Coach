@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.JdMapper">
+
+    <!-- 插入JD -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="jd.id">
+        INSERT INTO job_descriptions (user_id, title, company_name, source_url, content)
+        VALUES (#{jd.userId}, #{jd.title}, #{jd.companyName}, #{jd.sourceUrl}, #{jd.content})
+    </insert>
+
+    <!-- 批量删除JD（校验归属权） -->
+    <delete id="deleteByIdsAndUserId">
+        DELETE FROM job_descriptions
+        WHERE user_id = #{userId}
+        AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>
