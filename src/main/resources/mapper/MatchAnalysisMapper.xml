@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.MatchAnalysisMapper">
+
+    <!-- 插入匹配分析结果 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="m.id">
+        INSERT INTO resume_job_matches (resume_id, jd_id, overall_score, skill_score,
+                                        experience_score, strengths, gaps, analysis)
+        VALUES (#{m.resumeId}, #{m.jdId}, #{m.overallScore}, #{m.skillScore},
+                #{m.experienceScore}, #{m.strengths}, #{m.gaps}, #{m.analysis})
+    </insert>
+
+</mapper>

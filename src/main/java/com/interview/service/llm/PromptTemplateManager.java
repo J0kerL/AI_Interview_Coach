@@ -39,6 +39,7 @@ public class PromptTemplateManager {
     public void init() {
         loadTemplate("resume-parse");
         loadTemplate("jd-parse");
+        loadTemplate("match-analysis");
         loadTemplate("question-generate");
         loadTemplate("followup-generate");
         loadTemplate("report-generate");
