@@ -67,13 +67,6 @@ CREATE DATABASE interview_coach DEFAULT CHARACTER SET utf8mb4;
 mysql -u root -p interview_coach < sql/interview_coach.sql
 ```
 
-**额外 DDL（语音面试功能）：**
-
-```sql
-ALTER TABLE interview_sessions ADD COLUMN mode VARCHAR(10) DEFAULT 'text' COMMENT '面试模式：text/voice';
-ALTER TABLE interview_questions ADD COLUMN question_audio_url VARCHAR(1000) DEFAULT NULL COMMENT '问题语音URL';
-```
-
 ### 2. 修改配置
 
 编辑 `src/main/resources/application-dev.yaml`，填入你的环境信息：
