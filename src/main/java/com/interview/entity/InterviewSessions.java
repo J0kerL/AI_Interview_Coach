@@ -49,6 +49,11 @@ public class InterviewSessions {
     private String status;
 
     /**
+     * 面试模式：text-纯文字, voice-语音面试
+     */
+    private String mode;
+
+    /**
      * 题目总数
      */
     private Integer totalQuestions;

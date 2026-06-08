@@ -37,6 +37,16 @@ public class FileService {
     private static final String PDF_TYPE = "application/pdf";
 
     /**
+     * 允许的音频类型（面试录音）
+     */
+    private static final List<String> AUDIO_TYPES = Arrays.asList(
+            "audio/mpeg", "audio/mp3",
+            "audio/wav", "audio/x-wav",
+            "audio/webm", "audio/ogg",
+            "audio/mp4", "audio/m4a", "audio/x-m4a"
+    );
+
+    /**
      * 默认文件大小限制：10MB
      */
     private static final long DEFAULT_MAX_SIZE = 10 * 1024 * 1024;
@@ -60,6 +70,18 @@ public class FileService {
     }
 
     /**
+     * 上传音频文件（面试录音等）
+     *
+     * @param file   音频文件
+     * @param folder OSS 存储目录（如 interview-audio）
+     * @return 文件访问 URL
+     */
+    public String uploadAudio(MultipartFile file, String folder) {
+        validateFile(file, AUDIO_TYPES, DEFAULT_MAX_SIZE);
+        return doUpload(file, folder);
+    }
+
+    /**
      * 上传 PDF 文件（简历等）
      *
      * @param file   上传文件
@@ -78,6 +100,23 @@ public class FileService {
             throw new BusinessException("文件大小超出限制");
         }
         return doUpload(file, folder);
+    }
+
+    /**
+     * 上传音频字节数组到 OSS（TTS 合成等场景）
+     *
+     * @param inputStream 音频输入流
+     * @param objectKey   OSS 对象键
+     * @param size        文件大小（字节）
+     * @return 文件访问 URL
+     */
+    public String uploadAudioBytes(InputStream inputStream, String objectKey, long size) {
+        try {
+            ossClient.putObject(ossConfig.getBucketName(), objectKey, inputStream);
+        } catch (Exception e) {
+            throw new BusinessException("音频上传失败");
+        }
+        return ossConfig.getUrlPrefix() + "/" + objectKey;
     }
 
     /**

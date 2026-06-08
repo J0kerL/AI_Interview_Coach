@@ -53,6 +53,11 @@ public class InterviewQuestions {
     private String aiReason;
 
     /**
+     * 问题语音 URL（voice 模式）
+     */
+    private String questionAudioUrl;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

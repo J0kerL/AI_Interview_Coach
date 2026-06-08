@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.InterviewReportMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="r.id">
+        INSERT INTO interview_reports (session_id, overall_score, technical_score, communication_score,
+                                       project_score, strengths, weaknesses, recommendations, report_content)
+        VALUES (#{r.sessionId}, #{r.overallScore}, #{r.technicalScore}, #{r.communicationScore},
+                #{r.projectScore}, #{r.strengths}, #{r.weaknesses}, #{r.recommendations}, #{r.reportContent})
+    </insert>
+
+</mapper>
