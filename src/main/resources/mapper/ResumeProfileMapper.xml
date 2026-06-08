@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.interview.mapper.ResumeProfileMapper">
+
+    <!-- 插入简历解析结果 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="p.id">
+        INSERT INTO resume_profiles (resume_id, candidate_name, experience_years, summary,
+                                     skills, work_experiences, project_experiences, education)
+        VALUES (#{p.resumeId}, #{p.candidateName}, #{p.experienceYears}, #{p.summary},
+                #{p.skills}, #{p.workExperiences}, #{p.projectExperiences}, #{p.education})
+    </insert>
+
+</mapper>

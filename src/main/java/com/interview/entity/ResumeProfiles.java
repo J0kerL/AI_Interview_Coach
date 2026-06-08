@@ -64,11 +64,6 @@ public class ResumeProfiles {
     private String education;
 
     /**
-     * 解析模型
-     */
-    private String parsedModel;
-
-    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

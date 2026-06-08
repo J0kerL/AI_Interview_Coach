@@ -2,6 +2,7 @@ package com.interview.controller.resume;
 
 import com.interview.common.Result;
 import com.interview.service.ResumeService;
+import com.interview.vo.ResumeProfileVO;
 import com.interview.vo.ResumeVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -54,6 +55,24 @@ public class ResumeController {
     public Result<Void> deleteByIds(@RequestBody List<Long> ids) {
         resumeService.deleteByIds(ids);
         return Result.success();
+    }
+
+    /**
+     * 解析简历（调用 LLM 提取结构化信息）
+     */
+    @PostMapping("/{id}/parse")
+    public Result<Void> parseResume(@PathVariable Long id) {
+        resumeService.parseResume(id);
+        return Result.success();
+    }
+
+    /**
+     * 获取简历解析结果
+     */
+    @GetMapping("/{id}/profile")
+    public Result<ResumeProfileVO> getProfile(@PathVariable Long id) {
+        ResumeProfileVO profileVO = resumeService.getProfile(id);
+        return Result.success(profileVO);
     }
 
 }

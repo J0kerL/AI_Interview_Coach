@@ -1,5 +1,6 @@
 package com.interview.service;
 
+import com.interview.vo.ResumeProfileVO;
 import com.interview.vo.ResumeVO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,4 +31,15 @@ public interface ResumeService {
      * 根据ids批量删除简历
      */
     void deleteByIds(List<Long> ids);
+
+    /**
+     * 解析简历（调用 LLM）
+     */
+    void parseResume(Long resumeId);
+
+    /**
+     * 获取简历解析结果
+     */
+    ResumeProfileVO getProfile(Long resumeId);
+
 }

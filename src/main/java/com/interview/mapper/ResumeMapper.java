@@ -27,6 +27,9 @@ public interface ResumeMapper {
     @Update("UPDATE resumes SET deleted_at = NOW() WHERE id = #{id}")
     void deleteById(Long id);
 
+    @Update("UPDATE resumes SET parse_status = #{status} WHERE id = #{id} AND deleted_at IS NULL")
+    void updateParseStatus(@Param("id") Long id, @Param("status") int status);
+
     List<Resumes> selectByIds(@Param("ids") List<Long> ids);
 
     void deleteByIds(@Param("ids") List<Long> ids);
