@@ -4,6 +4,7 @@ import com.interview.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -25,19 +26,49 @@ public class LlmGatewayService {
     }
 
     /**
-     * 非流式调用：发送 Prompt，返回结构化 Java 对象
+     * 非流式调用（使用全局默认参数）
      *
      * @param prompt       完整的 Prompt 文本
      * @param responseType 期望的返回类型
      * @return 结构化对象
      */
     public <T> T call(String prompt, Class<T> responseType) {
-        log.debug("LLM 调用 [{}]: {}", responseType.getSimpleName(), truncate(prompt));
+        return doCall(prompt, responseType, null);
+    }
+
+    /**
+     * 非流式调用（自定义 temperature 和 maxTokens）
+     *
+     * @param prompt       完整的 Prompt 文本
+     * @param responseType 期望的返回类型
+     * @param options      调用参数（temperature、maxTokens）
+     * @return 结构化对象
+     */
+    public <T> T call(String prompt, Class<T> responseType, LlmCallOptions options) {
+        return doCall(prompt, responseType, options);
+    }
+
+    /**
+     * 内部调用实现
+     */
+    private <T> T doCall(String prompt, Class<T> responseType, LlmCallOptions options) {
+        log.debug("LLM 调用 [{}] temp={} maxTokens={}: {}",
+                responseType.getSimpleName(),
+                options != null ? options.getTemperature() : "default",
+                options != null ? options.getMaxTokens() : "default",
+                truncate(prompt));
         try {
-            return chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .entity(responseType);
+            var spec = chatClient.prompt().user(prompt);
+
+            // 如果有自定义参数，覆盖默认配置
+            if (options != null) {
+                spec = spec.options(OpenAiChatOptions.builder()
+                        .temperature(options.getTemperature())
+                        .maxTokens(options.getMaxTokens())
+                        .build());
+            }
+
+            return spec.call().entity(responseType);
         } catch (Exception e) {
             log.error("LLM 调用失败: {}", e.getMessage(), e);
             throw new BusinessException("AI 服务暂时不可用，请稍后重试");

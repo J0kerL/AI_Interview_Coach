@@ -17,6 +17,7 @@ import com.interview.mapper.ResumeMapper;
 import com.interview.mapper.ResumeProfileMapper;
 import com.interview.model.response.MatchAnalysisResult;
 import com.interview.service.MatchService;
+import com.interview.service.llm.LlmCallOptions;
 import com.interview.service.llm.LlmGatewayService;
 import com.interview.service.llm.PromptTemplateManager;
 import com.interview.vo.MatchAnalysisVO;
@@ -119,7 +120,8 @@ public class MatchServiceImpl implements MatchService {
                     "jdAnalysis", jdSummary,
                     "jdContent", jdContent
             ));
-            MatchAnalysisResult result = llmGatewayService.call(prompt, MatchAnalysisResult.class);
+            MatchAnalysisResult result = llmGatewayService.call(prompt, MatchAnalysisResult.class,
+                    LlmCallOptions.analysis());
 
             // 8. 写入 resume_job_matches 表
             ResumeJobMatches match = ResumeJobMatches.builder()

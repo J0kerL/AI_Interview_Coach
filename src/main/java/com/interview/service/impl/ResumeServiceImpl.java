@@ -12,6 +12,7 @@ import com.interview.model.response.ResumeParseResult;
 import com.interview.service.FileService;
 import com.interview.service.PdfParseService;
 import com.interview.service.ResumeService;
+import com.interview.service.llm.LlmCallOptions;
 import com.interview.service.llm.LlmGatewayService;
 import com.interview.service.llm.PromptTemplateManager;
 import com.interview.vo.ResumeProfileVO;
@@ -230,7 +231,8 @@ public class ResumeServiceImpl implements ResumeService {
             // 4. 构建 Prompt 并调用 LLM
             String prompt = promptTemplateManager.buildPrompt("resume-parse",
                     Map.of("resumeText", pdfText));
-            ResumeParseResult result = llmGatewayService.call(prompt, ResumeParseResult.class);
+            ResumeParseResult result = llmGatewayService.call(prompt, ResumeParseResult.class,
+                    LlmCallOptions.extraction());
 
             // 5. 将 LLM 结果转为 JSON 字符串，写入 resume_profiles
             ResumeProfiles profile = ResumeProfiles.builder()

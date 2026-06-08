@@ -11,6 +11,7 @@ import com.interview.mapper.JdAnalysisMapper;
 import com.interview.mapper.JdMapper;
 import com.interview.model.response.JdParseResult;
 import com.interview.service.JdService;
+import com.interview.service.llm.LlmCallOptions;
 import com.interview.service.llm.LlmGatewayService;
 import com.interview.service.llm.PromptTemplateManager;
 import com.interview.vo.JdAnalysisVO;
@@ -187,7 +188,8 @@ public class JdServiceImpl implements JdService {
             // 4. 构建 Prompt 并调用 LLM
             String prompt = promptTemplateManager.buildPrompt("jd-parse",
                     Map.of("jdText", jd.getContent()));
-            JdParseResult result = llmGatewayService.call(prompt, JdParseResult.class);
+            JdParseResult result = llmGatewayService.call(prompt, JdParseResult.class,
+                    LlmCallOptions.extraction());
 
             // 5. 将结果写入 jd_analysis 表
             JdAnalysis analysis = JdAnalysis.builder()
