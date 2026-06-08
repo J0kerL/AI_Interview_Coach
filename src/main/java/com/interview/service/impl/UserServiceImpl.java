@@ -33,9 +33,9 @@ public class UserServiceImpl implements UserService {
     @Resource
     private FileService fileService;
 
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public UserServiceImpl(RedisTemplate<Object, Object> redisTemplate) {
+    public UserServiceImpl(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
