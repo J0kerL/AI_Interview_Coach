@@ -28,9 +28,9 @@ public class AuthServiceImpl implements AuthService {
 
     private static final String CAPTCHA_PREFIX = "captcha:";
 
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public AuthServiceImpl(RedisTemplate<Object, Object> redisTemplate) {
+    public AuthServiceImpl(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
