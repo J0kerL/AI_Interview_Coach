@@ -38,11 +38,6 @@ public class JobDescriptions {
     private String companyName;
 
     /**
-     * JD来源链接
-     */
-    private String sourceUrl;
-
-    /**
      * JD原始内容
      */
     private String content;

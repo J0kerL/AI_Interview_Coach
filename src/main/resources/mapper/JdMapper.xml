@@ -4,8 +4,8 @@
 
     <!-- 插入JD -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="jd.id">
-        INSERT INTO job_descriptions (user_id, title, company_name, source_url, content)
-        VALUES (#{jd.userId}, #{jd.title}, #{jd.companyName}, #{jd.sourceUrl}, #{jd.content})
+        INSERT INTO job_descriptions (user_id, title, company_name, content)
+        VALUES (#{jd.userId}, #{jd.title}, #{jd.companyName}, #{jd.content})
     </insert>
 
     <!-- 批量删除JD（校验归属权） -->

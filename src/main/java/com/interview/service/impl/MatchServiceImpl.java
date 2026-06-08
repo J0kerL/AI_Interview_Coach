@@ -132,7 +132,7 @@ public class MatchServiceImpl implements MatchService {
                     .experienceScore(result.getExperienceScore())
                     .strengths(toJson(result.getStrengths()))
                     .gaps(toJson(result.getGaps()))
-                    .analysis(result.getAnalysis())
+                    .analysis(toJson(result.getAnalysis()))
                     .build();
             matchAnalysisMapper.insert(match);
 

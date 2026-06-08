@@ -29,11 +29,6 @@ public class JdVO {
     private String companyName;
 
     /**
-     * JD 来源链接
-     */
-    private String sourceUrl;
-
-    /**
      * JD 原始内容
      */
     private String content;

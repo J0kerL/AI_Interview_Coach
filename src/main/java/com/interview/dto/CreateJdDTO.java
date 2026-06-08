@@ -27,13 +27,9 @@ public class CreateJdDTO {
     private String companyName;
 
     /**
-     * JD 原始文本内容（与 sourceUrl 至少填一个）
+     * JD 原始文本内容（必填）
      */
+    @NotBlank(message = "JD 内容不能为空")
     private String content;
-
-    /**
-     * JD 来源链接（与 content 至少填一个）
-     */
-    private String sourceUrl;
 
 }

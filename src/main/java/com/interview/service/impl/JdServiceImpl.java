@@ -61,10 +61,7 @@ public class JdServiceImpl implements JdService {
 
         long userId = StpUtil.getLoginIdAsLong();
 
-        // 1. content 和 sourceUrl 至少填一个
-        if (!StringUtils.hasText(dto.getContent()) && !StringUtils.hasText(dto.getSourceUrl())) {
-            throw new BusinessException("JD 内容和来源链接至少填写一个");
-        }
+        // 1. content 必填（DTO已通过@NotBlank校验，此处无需额外检查）
 
         // 2. 校验数量上限
         int count = jdMapper.countByUserId(userId);
@@ -77,8 +74,7 @@ public class JdServiceImpl implements JdService {
                 .userId(userId)
                 .title(dto.getTitle())
                 .companyName(dto.getCompanyName())
-                .sourceUrl(StringUtils.hasText(dto.getSourceUrl()) ? dto.getSourceUrl() : null)
-                .content(StringUtils.hasText(dto.getContent()) ? dto.getContent() : null)
+                .content(dto.getContent())
                 .build();
         jdMapper.insert(jd);
 
