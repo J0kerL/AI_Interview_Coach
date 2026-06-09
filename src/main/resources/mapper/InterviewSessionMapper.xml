@@ -3,8 +3,8 @@
 <mapper namespace="com.interview.mapper.InterviewSessionMapper">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="s.id">
-        INSERT INTO interview_sessions (user_id, resume_id, jd_id, session_type, status, mode)
-        VALUES (#{s.userId}, #{s.resumeId}, #{s.jdId}, #{s.sessionType}, #{s.status}, #{s.mode})
+        INSERT INTO interview_sessions (user_id, resume_id, jd_id, session_type, status, mode, greeting, greeting_audio_url)
+        VALUES (#{s.userId}, #{s.resumeId}, #{s.jdId}, #{s.sessionType}, #{s.status}, #{s.mode}, #{s.greeting}, #{s.greetingAudioUrl})
     </insert>
 
 </mapper>

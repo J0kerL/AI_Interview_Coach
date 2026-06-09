@@ -54,6 +54,16 @@ public class InterviewSessions {
     private String mode;
 
     /**
+     * AI面试官开场白
+     */
+    private String greeting;
+
+    /**
+     * 开场白语音URL（voice模式时有值）
+     */
+    private String greetingAudioUrl;
+
+    /**
      * 题目总数
      */
     private Integer totalQuestions;

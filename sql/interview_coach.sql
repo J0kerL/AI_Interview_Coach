@@ -11,7 +11,7 @@
  Target Server Version : 80041 (8.0.41)
  File Encoding         : 65001
 
- Date: 08/06/2026 13:44:30
+ Date: 08/06/2026 19:37:50
 */
 
 SET NAMES utf8mb4;
@@ -32,7 +32,7 @@ CREATE TABLE `interview_answers`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_question`(`question_id` ASC) USING BTREE,
   CONSTRAINT `fk_answer_question` FOREIGN KEY (`question_id`) REFERENCES `interview_questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试回答表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试回答表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for interview_questions
@@ -52,7 +52,7 @@ CREATE TABLE `interview_questions`  (
   INDEX `idx_session`(`session_id` ASC) USING BTREE,
   INDEX `idx_session_seq`(`session_id` ASC, `sequence_no` ASC) USING BTREE,
   CONSTRAINT `fk_question_session` FOREIGN KEY (`session_id`) REFERENCES `interview_sessions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试问题表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试问题表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for interview_reports
@@ -73,7 +73,7 @@ CREATE TABLE `interview_reports`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_session`(`session_id` ASC) USING BTREE,
   CONSTRAINT `fk_report_session` FOREIGN KEY (`session_id`) REFERENCES `interview_sessions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试报告表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试报告表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for interview_sessions
@@ -87,6 +87,8 @@ CREATE TABLE `interview_sessions`  (
   `session_type` enum('resume','job','mixed') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '面试类型',
   `status` enum('pending','running','completed','terminated') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT '面试状态',
   `mode` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'text' COMMENT '面试模式：text/voice',
+  `greeting` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'AI面试官开场白',
+  `greeting_audio_url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '开场白语音URL',
   `total_questions` int NULL DEFAULT 0 COMMENT '题目总数',
   `overall_score` decimal(5, 2) NULL DEFAULT NULL COMMENT '最终评分',
   `started_at` datetime NULL DEFAULT NULL COMMENT '开始时间',
@@ -98,7 +100,7 @@ CREATE TABLE `interview_sessions`  (
   INDEX `idx_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
   INDEX `idx_created`(`created_at` ASC) USING BTREE,
   CONSTRAINT `fk_session_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试会话表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '面试会话表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for jd_analysis
@@ -115,7 +117,7 @@ CREATE TABLE `jd_analysis`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_jd`(`jd_id` ASC) USING BTREE,
   CONSTRAINT `fk_jd_analysis` FOREIGN KEY (`jd_id`) REFERENCES `job_descriptions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'JD分析结果表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'JD分析结果表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for job_descriptions
@@ -126,14 +128,13 @@ CREATE TABLE `job_descriptions`  (
   `user_id` bigint UNSIGNED NOT NULL COMMENT '用户ID',
   `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '岗位名称',
   `company_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '公司名称',
-  `source_url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'JD来源链接',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'JD原始内容',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_jd_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '岗位JD表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '岗位JD表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for resume_job_matches
@@ -155,7 +156,7 @@ CREATE TABLE `resume_job_matches`  (
   INDEX `idx_jd`(`jd_id` ASC) USING BTREE,
   CONSTRAINT `fk_match_jd` FOREIGN KEY (`jd_id`) REFERENCES `job_descriptions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_match_resume` FOREIGN KEY (`resume_id`) REFERENCES `resumes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '简历与岗位匹配分析表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '简历与岗位匹配分析表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for resume_profiles
@@ -175,7 +176,7 @@ CREATE TABLE `resume_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_resume`(`resume_id` ASC) USING BTREE,
   CONSTRAINT `fk_profile_resume` FOREIGN KEY (`resume_id`) REFERENCES `resumes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '简历解析结果表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '简历解析结果表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for resumes
@@ -194,7 +195,7 @@ CREATE TABLE `resumes`  (
   INDEX `idx_user`(`user_id` ASC) USING BTREE,
   INDEX `idx_user_created`(`user_id` ASC, `created_at` ASC) USING BTREE,
   CONSTRAINT `fk_resume_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户简历表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户简历表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users
@@ -215,6 +216,6 @@ CREATE TABLE `users`  (
   UNIQUE INDEX `phone`(`phone` ASC) USING BTREE,
   INDEX `idx_email`(`email` ASC) USING BTREE,
   INDEX `idx_phone`(`phone` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

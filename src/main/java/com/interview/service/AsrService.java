@@ -5,17 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interview.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.Base64;
+
 /**
  * 语音识别服务（ASR）
- * 调用小米 MiMo ASR API（兼容 OpenAI audio/transcriptions 协议）
+ * 调用小米 MiMo ASR API（通过 chat/completions 端点）
  *
  * @Author Diamond
  * @Create 2026/6/5
@@ -38,6 +39,16 @@ public class AsrService {
      */
     private static final String ASR_MODEL = "mimo-v2.5-asr";
 
+    /**
+     * 支持的音频格式 MIME 类型映射
+     */
+    private static final Map<String, String> MIME_TYPE_MAP = Map.of(
+            "wav", "audio/wav",
+            "mp3", "audio/mpeg",
+            "webm", "audio/webm",
+            "m4a", "audio/mp4"
+    );
+
     public AsrService(ObjectMapper objectMapper) {
         this.restClient = RestClient.create();
         this.objectMapper = objectMapper;
@@ -58,30 +69,48 @@ public class AsrService {
                 audioFile.getOriginalFilename(), audioFile.getSize());
 
         try {
-            // 构建 multipart 请求体
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", new MultipartInputStreamResource(audioFile));
-            body.add("model", ASR_MODEL);
-            body.add("language", "zh");
+            // 1. 将音频文件转为 Base64 编码
+            byte[] audioBytes = audioFile.getBytes();
+            String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            headers.setBearerAuth(apiKey);
+            // 2. 获取 MIME 类型
+            String filename = audioFile.getOriginalFilename();
+            String extension = getFileExtension(filename);
+            String mimeType = MIME_TYPE_MAP.getOrDefault(extension, "audio/webm");
+            String dataUrl = "data:" + mimeType + ";base64," + base64Audio;
 
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            // 3. 构建请求体（MiMo ASR 使用 chat completions 格式）
+            Map<String, Object> audioData = Map.of(
+                    "type", "input_audio",
+                    "input_audio", Map.of("data", dataUrl)
+            );
 
-            // 调用 ASR API：{base-url}/v1/audio/transcriptions
-            String url = baseUrl + "/v1/audio/transcriptions";
-            ResponseEntity<String> response = restClient.post()
+            Map<String, Object> userMessage = Map.of(
+                    "role", "user",
+                    "content", List.of(audioData)
+            );
+
+            Map<String, Object> requestBody = Map.of(
+                    "model", ASR_MODEL,
+                    "messages", List.of(userMessage),
+                    "asr_options", Map.of("language", "zh")
+            );
+
+            // 4. 调用 ASR API：{base-url}/v1/chat/completions
+            String url = baseUrl + "/v1/chat/completions";
+            String responseJson = restClient.post()
                     .uri(url)
-                    .headers(h -> h.addAll(headers))
-                    .body(requestEntity.getBody())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
                     .retrieve()
-                    .toEntity(String.class);
+                    .toEntity(String.class)
+                    .getBody();
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode json = objectMapper.readTree(response.getBody());
-                String text = json.has("text") ? json.get("text").asText() : "";
+            // 5. 解析响应
+            if (responseJson != null) {
+                JsonNode json = objectMapper.readTree(responseJson);
+                String text = json.path("choices").path(0).path("message").path("content").asText("");
 
                 if (text.isBlank()) {
                     throw new BusinessException("语音识别结果为空，请重新录音");
@@ -95,6 +124,9 @@ public class AsrService {
 
         } catch (BusinessException e) {
             throw e;
+        } catch (IOException e) {
+            log.error("读取音频文件失败", e);
+            throw new BusinessException("音频文件读取失败");
         } catch (Exception e) {
             log.error("ASR 语音识别失败", e);
             throw new BusinessException("语音识别失败：" + e.getMessage());
@@ -102,25 +134,12 @@ public class AsrService {
     }
 
     /**
-     * 包装 MultipartFile 为 Spring 的 Resource，支持 multipart 上传
+     * 获取文件扩展名
      */
-    private static class MultipartInputStreamResource extends InputStreamResource {
-        private final MultipartFile file;
-
-        public MultipartInputStreamResource(MultipartFile file) throws java.io.IOException {
-            super(file.getInputStream());
-            this.file = file;
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "webm";
         }
-
-        @Override
-        public String getFilename() {
-            return file.getOriginalFilename() != null ? file.getOriginalFilename() : "audio.webm";
-        }
-
-        @Override
-        public long contentLength() {
-            return file.getSize();
-        }
+        return filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
     }
-
 }

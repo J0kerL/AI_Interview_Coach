@@ -28,6 +28,16 @@ public class InterviewDetailVO {
     /** 面试模式：text/voice */
     private String mode;
 
+    /** AI面试官开场白 */
+    private String greeting;
+    /** 开场白语音 URL（voice 模式时有值） */
+    private String greetingAudioUrl;
+
+    /**
+     * 是否还有下一题
+     */
+    private Boolean hasNextQuestion;
+
     /**
      * 面试问答列表
      */

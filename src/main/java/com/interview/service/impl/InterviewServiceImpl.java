@@ -11,6 +11,7 @@ import com.interview.mapper.*;
 import com.interview.model.response.FollowUpResult;
 import com.interview.model.response.InterviewQuestionResult;
 import com.interview.model.response.InterviewReportResult;
+import com.interview.model.response.InterviewStartResult;
 import com.interview.service.AsrService;
 import com.interview.service.FileService;
 import com.interview.service.InterviewService;
@@ -97,67 +98,52 @@ public class InterviewServiceImpl implements InterviewService {
         // 2. 构建上下文信息
         String contextInfo = buildContextInfo(dto);
 
-        // 3. 创建面试会话（pending 状态）
+        // 3. 调用 LLM 生成开场白（开场白中已包含引导自我介绍的问题）
+        String prompt = promptTemplateManager.buildPrompt("interview-start", Map.of(
+                "interviewType", sessionType,
+                "contextInfo", contextInfo
+        ));
+        InterviewStartResult startResult = llmGatewayService.call(prompt, InterviewStartResult.class,
+                LlmCallOptions.creative());
+
+        // 4. 语音模式：为开场白生成 TTS
+        boolean isVoiceMode = "voice".equals(dto.getMode());
+        String greetingAudioUrl = null;
+
+        if (isVoiceMode) {
+            try {
+                greetingAudioUrl = ttsService.synthesize(startResult.getGreeting());
+            } catch (Exception ex) {
+                log.warn("开场白 TTS 生成失败: {}", ex.getMessage());
+            }
+        }
+
+        // 5. 创建面试会话（保存开场白）
         InterviewSessions session = InterviewSessions.builder()
                 .userId(userId)
                 .resumeId(dto.getResumeId())
                 .jdId(dto.getJdId())
                 .sessionType(sessionType)
-                .status("pending")
+                .status("running")
                 .mode(dto.getMode())
+                .greeting(startResult.getGreeting())
+                .greetingAudioUrl(greetingAudioUrl)
+                .totalQuestions(0)
                 .build();
         sessionMapper.insert(session);
 
-        try {
-            // 4. 调用 LLM 生成首轮题目
-            String prompt = promptTemplateManager.buildPrompt("question-generate", Map.of(
-                    "interviewType", sessionType,
-                    "contextInfo", contextInfo,
-                    "questionCount", dto.getQuestionCount()
-            ));
-            InterviewQuestionResult result = llmGatewayService.call(prompt, InterviewQuestionResult.class,
-                    LlmCallOptions.creative());
+        log.info("面试开始: sessionId={}", session.getId());
 
-            // 5. 语音模式：为每道题生成 TTS 音频
-            boolean isVoiceMode = "voice".equals(dto.getMode());
-            List<InterviewQuestions> questions = new ArrayList<>();
-            for (int i = 0; i < result.getQuestions().size(); i++) {
-                InterviewQuestionResult.Question q = result.getQuestions().get(i);
-                String audioUrl = null;
-                if (isVoiceMode) {
-                    try {
-                        audioUrl = ttsService.synthesize(q.getQuestionText());
-                    } catch (Exception ex) {
-                        log.warn("TTS 生成失败，跳过音频: {}", ex.getMessage());
-                    }
-                }
-                questions.add(InterviewQuestions.builder()
-                        .sessionId(session.getId())
-                        .questionType(q.getQuestionType())
-                        .sequenceNo(i + 1)
-                        .questionText(q.getQuestionText())
-                        .aiReason(q.getAiReason())
-                        .questionAudioUrl(audioUrl)
-                        .build());
-            }
-            questionMapper.batchInsert(questions);
-
-            // 6. 更新会话状态为 running
-            sessionMapper.updateRunning(session.getId(), "running", questions.size());
-
-            log.info("面试开始: sessionId={}, 题目数={}", session.getId(), questions.size());
-
-        } catch (Exception e) {
-            log.error("生成面试题目失败: sessionId={}", session.getId(), e);
-            sessionMapper.updateStatus(session.getId(), "terminated");
-            throw new BusinessException("生成面试题目失败：" + e.getMessage());
-        }
-
-        // 7. 返回面试详情
+        // 6. 返回面试详情
         return getInterviewDetail(session.getId());
     }
 
-    // ==================== 提交回答 + AI 追问 ====================
+    // ==================== 提交回答 + AI 追问 + 生成下一题 ====================
+
+    /**
+     * 面试最大题目数（包括追问）
+     */
+    private static final int MAX_QUESTIONS = 10;
 
     @Override
     public InterviewDetailVO.QAPair submitAnswer(Long sessionId, SubmitAnswerDTO dto) {
@@ -188,7 +174,11 @@ public class InterviewServiceImpl implements InterviewService {
                 .build();
         answerMapper.insert(answer);
 
-        // 4. AI 判断是否追问
+        // 4. 获取当前题目数量
+        List<InterviewQuestions> currentQuestions = questionMapper.selectBySessionId(sessionId);
+        int currentQuestionCount = currentQuestions.size();
+
+        // 5. AI 判断是否追问
         try {
             String chatHistory = buildChatHistory(sessionId);
             String resumeSummary = buildResumeSummaryForSession(session);
@@ -204,8 +194,7 @@ public class InterviewServiceImpl implements InterviewService {
 
             if (Boolean.TRUE.equals(followUp.getNeedFollowUp()) && StringUtils.hasText(followUp.getFollowUpQuestion())) {
                 // 生成追问
-                List<InterviewQuestions> questions = questionMapper.selectBySessionId(sessionId);
-                int nextSeqNo = questions.size() + 1;
+                int nextSeqNo = currentQuestionCount + 1;
 
                 InterviewQuestions followUpQuestion = InterviewQuestions.builder()
                         .sessionId(sessionId)
@@ -246,7 +235,72 @@ public class InterviewServiceImpl implements InterviewService {
             log.warn("AI 追问判断失败，跳过追问: sessionId={}", sessionId, e);
         }
 
-        // 不追问，返回 null
+        // 6. 不追问，检查是否需要生成下一道题
+        if (currentQuestionCount < MAX_QUESTIONS) {
+            return generateNextQuestion(session, currentQuestions);
+        }
+
+        // 已达到最大题目数，返回 null
+        return null;
+    }
+
+    /**
+     * 生成下一道面试题
+     */
+    private InterviewDetailVO.QAPair generateNextQuestion(InterviewSessions session, List<InterviewQuestions> existingQuestions) {
+        try {
+            String chatHistory = buildChatHistory(session.getId());
+            String contextInfo = buildContextInfoForSession(session);
+
+            String prompt = promptTemplateManager.buildPrompt("next-question-generate", Map.of(
+                    "interviewType", session.getSessionType(),
+                    "contextInfo", contextInfo,
+                    "chatHistory", chatHistory
+            ));
+            InterviewQuestionResult result = llmGatewayService.call(prompt, InterviewQuestionResult.class,
+                    LlmCallOptions.creative());
+
+            if (result.getQuestions() != null && !result.getQuestions().isEmpty()) {
+                InterviewQuestionResult.Question q = result.getQuestions().get(0);
+                int nextSeqNo = existingQuestions.size() + 1;
+
+                InterviewQuestions nextQuestion = InterviewQuestions.builder()
+                        .sessionId(session.getId())
+                        .questionType(q.getQuestionType() != null ? q.getQuestionType() : "technical")
+                        .sequenceNo(nextSeqNo)
+                        .questionText(q.getQuestionText())
+                        .aiReason(q.getAiReason())
+                        .build();
+
+                // 语音模式：为下一题生成 TTS
+                if ("voice".equals(session.getMode())) {
+                    try {
+                        String audioUrl = ttsService.synthesize(q.getQuestionText());
+                        nextQuestion.setQuestionAudioUrl(audioUrl);
+                    } catch (Exception ex) {
+                        log.warn("下一题 TTS 生成失败: {}", ex.getMessage());
+                    }
+                }
+
+                questionMapper.batchInsert(List.of(nextQuestion));
+
+                // 更新题目总数
+                sessionMapper.updateRunning(session.getId(), "running", nextSeqNo);
+
+                // 返回下一题
+                InterviewDetailVO.QAPair qaPair = new InterviewDetailVO.QAPair();
+                qaPair.setQuestionId(nextQuestion.getId());
+                qaPair.setQuestionType(nextQuestion.getQuestionType());
+                qaPair.setSequenceNo(nextSeqNo);
+                qaPair.setQuestionText(q.getQuestionText());
+                qaPair.setQuestionAudioUrl(nextQuestion.getQuestionAudioUrl());
+                return qaPair;
+            }
+
+        } catch (Exception e) {
+            log.warn("生成下一题失败: sessionId={}", session.getId(), e);
+        }
+
         return null;
     }
 
@@ -328,6 +382,14 @@ public class InterviewServiceImpl implements InterviewService {
         }).toList();
 
         vo.setQaPairs(qaPairs);
+
+        // 计算是否还有下一题（已回答数量 >= 题目总数且总数 < 最大题目数）
+        long answeredCount = answers.size();
+        boolean hasNextQuestion = "running".equals(session.getStatus())
+                && answeredCount >= questions.size()
+                && questions.size() < MAX_QUESTIONS;
+        vo.setHasNextQuestion(hasNextQuestion);
+
         return vo;
     }
 
@@ -488,6 +550,53 @@ public class InterviewServiceImpl implements InterviewService {
 
         if (dto.getJdId() != null) {
             JdAnalysis analysis = jdAnalysisMapper.selectByJdId(dto.getJdId());
+            if (analysis != null) {
+                sb.append("\n岗位要求分析：\n");
+                if (StringUtils.hasText(analysis.getRequiredSkills())) {
+                    sb.append("必备技能：").append(analysis.getRequiredSkills()).append("\n");
+                }
+                if (StringUtils.hasText(analysis.getPreferredSkills())) {
+                    sb.append("加分技能：").append(analysis.getPreferredSkills()).append("\n");
+                }
+                if (StringUtils.hasText(analysis.getResponsibilities())) {
+                    sb.append("岗位职责：").append(analysis.getResponsibilities()).append("\n");
+                }
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 根据会话构建上下文信息（用于生成下一题）
+     */
+    private String buildContextInfoForSession(InterviewSessions session) {
+        StringBuilder sb = new StringBuilder();
+
+        if (session.getResumeId() != null) {
+            ResumeProfiles profile = resumeProfileMapper.selectByResumeId(session.getResumeId());
+            if (profile != null) {
+                sb.append("候选人简历画像：\n");
+                if (StringUtils.hasText(profile.getCandidateName())) {
+                    sb.append("姓名：").append(profile.getCandidateName()).append("\n");
+                }
+                if (profile.getExperienceYears() != null) {
+                    sb.append("工作年限：").append(profile.getExperienceYears()).append("年\n");
+                }
+                if (StringUtils.hasText(profile.getSummary())) {
+                    sb.append("个人总结：").append(profile.getSummary()).append("\n");
+                }
+                if (StringUtils.hasText(profile.getSkills())) {
+                    sb.append("技能标签：").append(profile.getSkills()).append("\n");
+                }
+                if (StringUtils.hasText(profile.getProjectExperiences())) {
+                    sb.append("项目经历：").append(profile.getProjectExperiences()).append("\n");
+                }
+            }
+        }
+
+        if (session.getJdId() != null) {
+            JdAnalysis analysis = jdAnalysisMapper.selectByJdId(session.getJdId());
             if (analysis != null) {
                 sb.append("\n岗位要求分析：\n");
                 if (StringUtils.hasText(analysis.getRequiredSkills())) {

@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 面试会话VO
@@ -20,6 +19,10 @@ public class InterviewSessionVO {
     private Long jdId;
     private String sessionType;
     private String status;
+    /**
+     * 面试模式：text-纯文字, voice-语音面试
+     */
+    private String mode;
     private Integer totalQuestions;
     private BigDecimal overallScore;
     private LocalDateTime startedAt;
