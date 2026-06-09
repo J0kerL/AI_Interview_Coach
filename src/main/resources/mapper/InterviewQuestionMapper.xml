@@ -10,4 +10,9 @@
         </foreach>
     </insert>
 
+    <insert id="insert" useGeneratedKeys="true" keyProperty="question.id">
+        INSERT INTO interview_questions (session_id, parent_question_id, question_type, sequence_no, question_text, ai_reason, question_audio_url)
+        VALUES (#{question.sessionId}, #{question.parentQuestionId}, #{question.questionType}, #{question.sequenceNo}, #{question.questionText}, #{question.aiReason}, #{question.questionAudioUrl})
+    </insert>
+
 </mapper>

@@ -45,6 +45,7 @@ public class PromptTemplateManager {
         loadTemplate("report-generate");
         loadTemplate("interview-start");
         loadTemplate("next-question-generate");
+        loadTemplate("interview-closing");
         log.info("Prompt 模板加载完成，共 {} 个", templateCache.size());
     }
 

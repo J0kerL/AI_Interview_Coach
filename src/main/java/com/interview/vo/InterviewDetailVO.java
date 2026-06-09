@@ -59,6 +59,8 @@ public class InterviewDetailVO {
         private String questionAudioUrl;
         /** 回答内容（未回答时为 null） */
         private String answerText;
+        /** 是否为面试结束语（true 时前端应在播报完毕后自动结束面试） */
+        private Boolean isFinished;
     }
 
 }

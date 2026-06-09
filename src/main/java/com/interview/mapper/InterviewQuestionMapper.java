@@ -14,6 +14,8 @@ public interface InterviewQuestionMapper {
 
     void batchInsert(@Param("list") List<InterviewQuestions> questions);
 
+    void insert(@Param("question") InterviewQuestions question);
+
     @Select("SELECT * FROM interview_questions WHERE session_id = #{sessionId} ORDER BY sequence_no ASC")
     List<InterviewQuestions> selectBySessionId(@Param("sessionId") Long sessionId);
 

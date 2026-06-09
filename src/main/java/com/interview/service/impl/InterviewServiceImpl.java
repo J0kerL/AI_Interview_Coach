@@ -132,18 +132,29 @@ public class InterviewServiceImpl implements InterviewService {
                 .build();
         sessionMapper.insert(session);
 
-        log.info("面试开始: sessionId={}", session.getId());
+        // 6. 为开场白（自我介绍引导）创建对应的题目记录，使前端能获取到有效的 questionId
+        InterviewQuestions introQuestion = InterviewQuestions.builder()
+                .sessionId(session.getId())
+                .questionType("intro")
+                .sequenceNo(1)
+                .questionText(startResult.getGreeting())
+                .aiReason("开场白引导候选人自我介绍")
+                .questionAudioUrl(greetingAudioUrl)
+                .build();
+        questionMapper.insert(introQuestion);
 
-        // 6. 返回面试详情
+        log.info("面试开始: sessionId={}, introQuestionId={}", session.getId(), introQuestion.getId());
+
+        // 7. 返回面试详情
         return getInterviewDetail(session.getId());
     }
 
     // ==================== 提交回答 + AI 追问 + 生成下一题 ====================
 
     /**
-     * 面试最大题目数（包括追问）
+     * 面试最大题目数（包括追问，第 MAX_QUESTIONS 题为结束语）
      */
-    private static final int MAX_QUESTIONS = 10;
+    private static final int MAX_QUESTIONS = 15;
 
     @Override
     public InterviewDetailVO.QAPair submitAnswer(Long sessionId, SubmitAnswerDTO dto) {
@@ -178,7 +189,17 @@ public class InterviewServiceImpl implements InterviewService {
         List<InterviewQuestions> currentQuestions = questionMapper.selectBySessionId(sessionId);
         int currentQuestionCount = currentQuestions.size();
 
-        // 5. AI 判断是否追问
+        // 5. 若已达到倒数第二题（第 MAX_QUESTIONS-1 题），跳过追问，直接生成结束语
+        if (currentQuestionCount >= MAX_QUESTIONS - 1) {
+            return generateClosingStatement(session, currentQuestionCount);
+        }
+
+        // 6. 若已达到最大题目数，返回 null（安全兜底）
+        if (currentQuestionCount >= MAX_QUESTIONS) {
+            return null;
+        }
+
+        // 7. AI 判断是否追问
         try {
             String chatHistory = buildChatHistory(sessionId);
             String resumeSummary = buildResumeSummaryForSession(session);
@@ -186,6 +207,7 @@ public class InterviewServiceImpl implements InterviewService {
             String prompt = promptTemplateManager.buildPrompt("followup-generate", Map.of(
                     "resumeSummary", resumeSummary,
                     "chatHistory", chatHistory,
+                    "lastQuestionType", question.getQuestionType() != null ? question.getQuestionType() : "technical",
                     "lastQuestion", question.getQuestionText(),
                     "lastAnswer", dto.getAnswerText()
             ));
@@ -235,13 +257,8 @@ public class InterviewServiceImpl implements InterviewService {
             log.warn("AI 追问判断失败，跳过追问: sessionId={}", sessionId, e);
         }
 
-        // 6. 不追问，检查是否需要生成下一道题
-        if (currentQuestionCount < MAX_QUESTIONS) {
-            return generateNextQuestion(session, currentQuestions);
-        }
-
-        // 已达到最大题目数，返回 null
-        return null;
+        // 8. 不追问，生成下一道面试题
+        return generateNextQuestion(session, currentQuestions);
     }
 
     /**
@@ -304,6 +321,93 @@ public class InterviewServiceImpl implements InterviewService {
         return null;
     }
 
+    /**
+     * 生成面试结束语（第 MAX_QUESTIONS 题），并自动结束面试会话
+     */
+    private InterviewDetailVO.QAPair generateClosingStatement(InterviewSessions session, int currentQuestionCount) {
+        int closingSeqNo = currentQuestionCount + 1;
+        try {
+            String chatHistory = buildChatHistory(session.getId());
+
+            String prompt = promptTemplateManager.buildPrompt("interview-closing", Map.of(
+                    "interviewType", session.getSessionType(),
+                    "chatHistory", chatHistory
+            ));
+            String closingText = llmGatewayService.callForText(prompt);
+
+            if (!StringUtils.hasText(closingText)) {
+                closingText = "感谢你参加今天的面试，本次面试到此结束，面试结果将会尽快反馈给你，祝你一切顺利！";
+            }
+
+            // 语音模式：为结束语生成 TTS
+            String audioUrl = null;
+            if ("voice".equals(session.getMode())) {
+                try {
+                    audioUrl = ttsService.synthesize(closingText);
+                } catch (Exception ex) {
+                    log.warn("结束语 TTS 生成失败: {}", ex.getMessage());
+                }
+            }
+
+            InterviewQuestions closingQuestion = InterviewQuestions.builder()
+                    .sessionId(session.getId())
+                    .questionType("closing")
+                    .sequenceNo(closingSeqNo)
+                    .questionText(closingText)
+                    .aiReason("面试结束，生成结束语")
+                    .questionAudioUrl(audioUrl)
+                    .build();
+            questionMapper.batchInsert(List.of(closingQuestion));
+
+            // 自动结束面试会话
+            sessionMapper.updateStatus(session.getId(), "completed");
+            log.info("面试自动结束: sessionId={}, closingSeqNo={}", session.getId(), closingSeqNo);
+
+            // 返回结束语 QAPair（标记 isFinished=true）
+            InterviewDetailVO.QAPair qaPair = new InterviewDetailVO.QAPair();
+            qaPair.setQuestionId(closingQuestion.getId());
+            qaPair.setQuestionType("closing");
+            qaPair.setSequenceNo(closingSeqNo);
+            qaPair.setQuestionText(closingText);
+            qaPair.setQuestionAudioUrl(audioUrl);
+            qaPair.setIsFinished(true);
+            return qaPair;
+
+        } catch (Exception e) {
+            log.warn("生成结束语失败，使用默认结束语: sessionId={}", session.getId(), e);
+
+            String defaultClosing = "感谢你参加今天的面试，本次面试到此结束，面试结果将会尽快反馈给你，祝你一切顺利！";
+            String audioUrl = null;
+            if ("voice".equals(session.getMode())) {
+                try {
+                    audioUrl = ttsService.synthesize(defaultClosing);
+                } catch (Exception ex) {
+                    log.warn("默认结束语 TTS 生成失败: {}", ex.getMessage());
+                }
+            }
+
+            InterviewQuestions closingQuestion = InterviewQuestions.builder()
+                    .sessionId(session.getId())
+                    .questionType("closing")
+                    .sequenceNo(closingSeqNo)
+                    .questionText(defaultClosing)
+                    .aiReason("结束语生成失败，使用默认文本")
+                    .questionAudioUrl(audioUrl)
+                    .build();
+            questionMapper.batchInsert(List.of(closingQuestion));
+            sessionMapper.updateStatus(session.getId(), "completed");
+
+            InterviewDetailVO.QAPair qaPair = new InterviewDetailVO.QAPair();
+            qaPair.setQuestionId(closingQuestion.getId());
+            qaPair.setQuestionType("closing");
+            qaPair.setSequenceNo(closingSeqNo);
+            qaPair.setQuestionText(defaultClosing);
+            qaPair.setQuestionAudioUrl(audioUrl);
+            qaPair.setIsFinished(true);
+            return qaPair;
+        }
+    }
+
     // ==================== 语音回答 ====================
 
     @Override
@@ -343,6 +447,10 @@ public class InterviewServiceImpl implements InterviewService {
         validateSessionOwnership(sessionId, userId);
 
         InterviewSessions session = sessionMapper.selectById(sessionId);
+        if ("completed".equals(session.getStatus())) {
+            // 已结束（如结束语自动结束），幂等返回
+            return;
+        }
         if (!"running".equals(session.getStatus())) {
             throw new BusinessException("面试未在进行中");
         }
